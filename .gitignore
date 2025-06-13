@@ -44,4 +44,8 @@ logs/
 
 # OS
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# Data files
+*.csv
+anomaliq/src/data/creditcard.csv 
