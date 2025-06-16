@@ -26,7 +26,8 @@ from . import models
 from . import features
 from . import data
 from . import utils
-from . import monitoring
+# Temporarily disable monitoring due to evidently issues
+# from . import monitoring
 
 __all__ = [
     "api",
@@ -35,6 +36,6 @@ __all__ = [
     "features",
     "data",
     "utils",
-    "monitoring",
+    # "monitoring",
     "__version__",
 ] 

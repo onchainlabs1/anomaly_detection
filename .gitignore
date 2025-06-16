@@ -34,6 +34,7 @@ ENV/
 # MLflow
 mlruns/
 mlartifacts/
+models/
 
 # Logs
 *.log
@@ -41,6 +42,7 @@ logs/
 
 # Environment variables
 .env
+*.env
 
 # OS
 .DS_Store
@@ -48,4 +50,17 @@ Thumbs.db
 
 # Data files
 *.csv
-anomaliq/src/data/creditcard.csv 
+data/
+anomaliq/data/
+anomaliq/src/data/*.csv
+
+# SQLite database
+*.db
+anomaliq.db
+
+# Streamlit
+.streamlit/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb 

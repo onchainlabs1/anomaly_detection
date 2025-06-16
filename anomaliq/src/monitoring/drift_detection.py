@@ -9,8 +9,10 @@ import pandas as pd
 import numpy as np
 from typing import Dict, List, Any, Tuple, Optional
 from scipy import stats
-from evidently.metrics import DatasetDriftMetric
 from evidently.report import Report
+from evidently.metrics import DataDriftPreset
+from evidently.test_suite import TestSuite
+from evidently.test_preset import DataDriftTestPreset
 
 from src.data import DataLoader
 from src.utils import get_settings, get_monitoring_config, monitoring_logger, log_data_drift
@@ -145,15 +147,31 @@ class DataDriftDetector:
     ) -> Dict[str, Any]:
         """Generate comprehensive drift report using Evidently."""
         try:
-            # Use Evidently for comprehensive drift analysis
-            data_drift_report = Report(metrics=[DatasetDriftMetric()])
-            data_drift_report.run(
+            # Create test suite for drift detection
+            suite = TestSuite(tests=[
+                DataDriftTestPreset(),
+            ])
+            
+            suite.run(
+                reference_data=reference_data,
+                current_data=live_data
+            )
+            
+            # Create report with drift metrics
+            report = Report(metrics=[
+                DataDriftPreset(),
+            ])
+            
+            report.run(
                 reference_data=reference_data,
                 current_data=live_data
             )
             
             # Extract results
-            results = data_drift_report.as_dict()
+            results = {
+                'test_suite': suite.json(),
+                'metrics': report.json()
+            }
             
             return {
                 'evidently_report': results,
