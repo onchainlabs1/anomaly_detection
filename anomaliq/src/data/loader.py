@@ -26,6 +26,32 @@ class DataLoader:
         self.settings = get_settings()
         self.logger = data_logger
     
+    def load_data(self) -> pd.DataFrame:
+        """Load the credit card dataset."""
+        data_path = Path(self.settings.data_dir) / "creditcard.csv"
+        self.logger.info(f"Loading credit card dataset from: {data_path}")
+        
+        try:
+            df = pd.read_csv(data_path)
+            self.logger.info(f"Loaded dataset with shape: {df.shape}")
+            
+            # Clean column names
+            df = clean_column_names(df)
+            
+            # Handle any missing values
+            if df.isnull().any().any():
+                self.logger.warning("Found missing values, applying mean imputation")
+                df = handle_missing_values(df, strategy="mean")
+            
+            return df
+            
+        except FileNotFoundError:
+            self.logger.error(f"File not found: {data_path}")
+            raise
+        except Exception as e:
+            self.logger.error(f"Error loading dataset: {str(e)}")
+            raise
+    
     def load_csv(
         self, 
         file_path: Union[str, Path],

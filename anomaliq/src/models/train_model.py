@@ -8,12 +8,14 @@ import argparse
 import pandas as pd
 import numpy as np
 from pathlib import Path
-from typing import Dict, Any, Tuple, Optional
+from typing import Dict, Any, Tuple, Optional, Union
 import mlflow
 import mlflow.sklearn
 from sklearn.ensemble import IsolationForest
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score, precision_recall_curve
+from sklearn.preprocessing import StandardScaler
+from loguru import logger
 
 from src.data import DataLoader, DataValidator
 from src.features import FeaturePipeline
@@ -36,26 +38,21 @@ class AnomalyModelTrainer:
         mlflow.set_tracking_uri(self.settings.mlflow_tracking_uri)
         mlflow.set_experiment(self.settings.mlflow_experiment_name)
     
-    def load_and_prepare_data(self, data_path: Optional[str] = None) -> Tuple[pd.DataFrame, Optional[pd.Series]]:
-        """Load and prepare training data."""
+    def load_and_prepare_data(
+        self,
+        data_path: Optional[Union[str, Path]] = None
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """Load and prepare data for training."""
         self.logger.info("Loading and preparing training data")
         
-        # Load data
         data_loader = DataLoader()
-        if data_path:
-            df = data_loader.load_csv(data_path)
-        else:
-            df = data_loader.load_training_data()
         
-        # Validate data quality
-        validator = DataValidator()
-        if not validator.validate_for_training(df):
-            raise ValueError("Data validation failed")
+        # Use creditcard.csv as the training data source
+        df = data_loader.load_training_data(file_path="anomaliq/src/data/creditcard.csv")
         
-        # Extract features and target
+        # Prepare features and target
         X, y = data_loader.prepare_features_target(df)
         
-        self.logger.info(f"Data prepared: {X.shape[0]} samples, {X.shape[1]} features")
         return X, y
     
     def prepare_features(self, X: pd.DataFrame, y: Optional[pd.Series] = None) -> Tuple[pd.DataFrame, FeaturePipeline]:
@@ -65,7 +62,7 @@ class AnomalyModelTrainer:
         # Create feature pipeline
         feature_pipeline = FeaturePipeline(
             include_time_features=True,
-            scaler_type=self.model_config.SCALER_TYPE,
+            scaler_type=self.model_config.scaler_type,
             handle_outliers=True
         )
         
@@ -81,12 +78,10 @@ class AnomalyModelTrainer:
         
         # Initialize model with configuration
         model = IsolationForest(
-            contamination=self.model_config.CONTAMINATION,
-            n_estimators=self.model_config.N_ESTIMATORS,
-            max_samples=self.model_config.MAX_SAMPLES,
-            max_features=self.model_config.MAX_FEATURES,
-            bootstrap=self.model_config.BOOTSTRAP,
-            random_state=self.model_config.RANDOM_STATE,
+            contamination=self.model_config.contamination,
+            n_estimators=self.model_config.n_estimators,
+            max_samples=self.model_config.max_samples,
+            random_state=self.model_config.random_state,
             n_jobs=-1
         )
         
@@ -185,15 +180,15 @@ class AnomalyModelTrainer:
                 if y is not None:
                     X_train, X_test, y_train, y_test = train_test_split(
                         X, y, 
-                        test_size=self.model_config.TEST_SIZE,
-                        random_state=self.model_config.RANDOM_STATE,
+                        test_size=self.model_config.test_size,
+                        random_state=self.model_config.random_state,
                         stratify=y
                     )
                 else:
                     X_train, X_test = train_test_split(
                         X, 
-                        test_size=self.model_config.TEST_SIZE,
-                        random_state=self.model_config.RANDOM_STATE
+                        test_size=self.model_config.test_size,
+                        random_state=self.model_config.random_state
                     )
                     y_train, y_test = None, None
                 
@@ -208,11 +203,10 @@ class AnomalyModelTrainer:
                 mlflow.log_param("n_features_processed", X_train_processed.shape[1])
                 
                 # Log model parameters
-                mlflow.log_param("contamination", self.model_config.CONTAMINATION)
-                mlflow.log_param("n_estimators", self.model_config.N_ESTIMATORS)
-                mlflow.log_param("max_samples", self.model_config.MAX_SAMPLES)
-                mlflow.log_param("max_features", self.model_config.MAX_FEATURES)
-                mlflow.log_param("scaler_type", self.model_config.SCALER_TYPE)
+                mlflow.log_param("contamination", self.model_config.contamination)
+                mlflow.log_param("n_estimators", self.model_config.n_estimators)
+                mlflow.log_param("max_samples", self.model_config.max_samples)
+                mlflow.log_param("scaler_type", self.model_config.scaler_type)
                 
                 # Train model
                 model = self.train_isolation_forest(X_train_processed, y_train)

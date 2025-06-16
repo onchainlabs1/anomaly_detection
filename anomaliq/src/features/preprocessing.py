@@ -35,14 +35,10 @@ class AnomalyPreprocessor(BaseEstimator, TransformerMixin):
         self.outlier_bounds = {}
         self.feature_names = None
         self.is_fitted = False
-        
-        self.logger = model_logger
-        self.settings = get_settings()
-        self.model_config = get_model_config()
     
     def fit(self, X: pd.DataFrame, y: Optional[pd.Series] = None):
         """Fit the preprocessor on training data."""
-        self.logger.info("Fitting anomaly preprocessor")
+        model_logger.info("Fitting anomaly preprocessor")
         
         # Store feature names
         self.feature_names = list(X.columns)
@@ -65,7 +61,7 @@ class AnomalyPreprocessor(BaseEstimator, TransformerMixin):
             self.outlier_bounds = self._calculate_outlier_bounds(X)
         
         self.is_fitted = True
-        self.logger.info("Anomaly preprocessor fitted successfully")
+        model_logger.info("Anomaly preprocessor fitted successfully")
         return self
     
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
@@ -161,7 +157,7 @@ class AnomalyPreprocessor(BaseEstimator, TransformerMixin):
     def save(self, file_path: Union[str, Path]) -> None:
         """Save the fitted preprocessor."""
         save_model(self, file_path)
-        self.logger.info(f"Preprocessor saved to: {file_path}")
+        model_logger.info(f"Preprocessor saved to: {file_path}")
     
     @classmethod
     def load(cls, file_path: Union[str, Path]) -> 'AnomalyPreprocessor':
@@ -177,7 +173,6 @@ class TimeSeriesPreprocessor(BaseEstimator, TransformerMixin):
     def __init__(self, time_column: str = "Time"):
         self.time_column = time_column
         self.is_fitted = False
-        self.logger = model_logger
     
     def fit(self, X: pd.DataFrame, y: Optional[pd.Series] = None):
         """Fit the time series preprocessor."""
@@ -237,7 +232,6 @@ class FeaturePipeline:
         self.feature_names_in = None
         self.feature_names_out = None
         
-        self.logger = model_logger
         self.settings = get_settings()
     
     def build_pipeline(self, X: pd.DataFrame) -> Pipeline:
@@ -262,7 +256,7 @@ class FeaturePipeline:
     
     def fit(self, X: pd.DataFrame, y: Optional[pd.Series] = None):
         """Fit the feature pipeline."""
-        self.logger.info("Fitting feature pipeline")
+        model_logger.info("Fitting feature pipeline")
         
         self.feature_names_in = list(X.columns)
         self.pipeline = self.build_pipeline(X)
@@ -273,7 +267,7 @@ class FeaturePipeline:
         self.feature_names_out = list(X_transformed.columns)
         
         self.is_fitted = True
-        self.logger.info(f"Feature pipeline fitted: {len(self.feature_names_in)} -> {len(self.feature_names_out)} features")
+        model_logger.info(f"Feature pipeline fitted: {len(self.feature_names_in)} -> {len(self.feature_names_out)} features")
         return self
     
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
@@ -297,7 +291,7 @@ class FeaturePipeline:
             preprocessor = self.pipeline.named_steps['preprocessor']
             return preprocessor.inverse_transform(X)
         else:
-            self.logger.warning("Full inverse transform not supported with time features")
+            model_logger.warning("Full inverse transform not supported with time features")
             return X
     
     def get_feature_names(self) -> List[str]:
@@ -324,7 +318,7 @@ class FeaturePipeline:
         with open(metadata_path, 'w') as f:
             json.dump(metadata, f, indent=2)
         
-        self.logger.info(f"Feature pipeline saved to: {file_path}")
+        model_logger.info(f"Feature pipeline saved to: {file_path}")
     
     @classmethod
     def load(cls, file_path: Union[str, Path]) -> 'FeaturePipeline':

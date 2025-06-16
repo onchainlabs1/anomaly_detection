@@ -7,14 +7,16 @@ import os
 from typing import List, Optional
 from pydantic_settings import BaseSettings
 from pydantic import Field
+from functools import lru_cache
+from pathlib import Path
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
     
     # API Configuration
-    api_host: str = Field(default="0.0.0.0", env="API_HOST")
-    api_port: int = Field(default=8000, env="API_PORT")
+    api_host: str = "0.0.0.0"
+    api_port: int = 8000
     api_debug: bool = Field(default=True, env="API_DEBUG")
     
     # JWT Authentication
@@ -27,9 +29,10 @@ class Settings(BaseSettings):
     redis_url: str = Field(default="redis://localhost:6379", env="REDIS_URL")
     
     # MLflow Configuration
-    mlflow_tracking_uri: str = Field(default="./mlruns", env="MLFLOW_TRACKING_URI")
+    mlflow_tracking_uri: str = "http://localhost:5001"
     mlflow_experiment_name: str = Field(default="anomaly_detection", env="MLFLOW_EXPERIMENT_NAME")
-    mlflow_model_name: str = Field(default="isolation_forest_anomaly_detector", env="MLFLOW_MODEL_NAME")
+    mlflow_model_name: str = "isolation_forest_anomaly_detector"
+    mlflow_model_stage: str = "Production"
     
     # Streamlit Configuration
     streamlit_host: str = Field(default="0.0.0.0", env="STREAMLIT_HOST")
@@ -38,13 +41,13 @@ class Settings(BaseSettings):
     # Model Configuration
     model_threshold: float = Field(default=0.1, env="MODEL_THRESHOLD")
     feature_columns: str = Field(
-        default="V1,V2,V3,V4,V5,V6,V7,V8,V9,V10,V11,V12,V13,V14,V15,V16,V17,V18,V19,V20,V21,V22,V23,V24,V25,V26,V27,V28,Time,Amount",
+        default="v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15,v16,v17,v18,v19,v20,v21,v22,v23,v24,v25,v26,v27,v28,time,amount",
         env="FEATURE_COLUMNS"
     )
-    target_column: str = Field(default="Class", env="TARGET_COLUMN")
+    target_column: str = Field(default="class", env="TARGET_COLUMN")
     
     # Monitoring Configuration
-    drift_threshold: float = Field(default=0.1, env="DRIFT_THRESHOLD")
+    drift_threshold: float = Field(default=0.05, env="DRIFT_THRESHOLD")
     alert_email: str = Field(default="admin@anomaliq.com", env="ALERT_EMAIL")
     
     # Logging Configuration
@@ -52,7 +55,8 @@ class Settings(BaseSettings):
     log_format: str = Field(default="json", env="LOG_FORMAT")
     
     # Data Configuration
-    data_path: str = Field(default="./data/", env="DATA_PATH")
+    data_dir: Path = Path(__file__).parent.parent.parent / "src" / "data"
+    model_dir: Path = Path(__file__).parent.parent.parent / "models"
     reference_data_path: str = Field(default="./data/reference_data.csv", env="REFERENCE_DATA_PATH")
     live_data_path: str = Field(default="./data/live_data.csv", env="LIVE_DATA_PATH")
     
@@ -80,44 +84,42 @@ class Settings(BaseSettings):
         return self.mlflow_tracking_uri
 
 
-class ModelConfig:
+class ModelConfig(BaseSettings):
     """Configuration for ML model parameters."""
     
     # Isolation Forest parameters
-    CONTAMINATION = 0.1
-    N_ESTIMATORS = 100
-    MAX_SAMPLES = "auto"
-    MAX_FEATURES = 1.0
-    BOOTSTRAP = False
-    RANDOM_STATE = 42
+    n_estimators: int = 100
+    max_samples: float = 0.8
+    contamination: float = 0.1
+    random_state: int = 42
     
     # Feature scaling
-    SCALER_TYPE = "standard"  # "standard", "minmax", "robust"
+    scaler_type: str = "standard"  # "standard", "minmax", "robust"
     
     # SHAP configuration
-    SHAP_BACKGROUND_SAMPLES = 100
-    SHAP_MAX_DISPLAY = 20
+    shap_background_samples: int = 100
+    shap_max_display: int = 20
     
     # Training configuration
-    TEST_SIZE = 0.2
-    VALIDATION_SIZE = 0.2
-    CV_FOLDS = 5
+    test_size: float = 0.2
+    validation_size: float = 0.2
+    cv_folds: int = 5
 
 
-class MonitoringConfig:
+class MonitoringConfig(BaseSettings):
     """Configuration for monitoring and alerting."""
     
     # Drift detection
-    DRIFT_DETECTION_METHODS = ["ks", "wasserstein", "psi"]
-    ALERT_THRESHOLD = 0.05
+    drift_detection_methods: List[str] = ["ks", "wasserstein", "psi"]
+    alert_threshold: float = 0.05
     
     # Performance monitoring
-    PERFORMANCE_WINDOW_DAYS = 7
-    MIN_SAMPLES_FOR_DRIFT = 1000
+    window_size: int = 1000
+    check_interval: int = 100
     
     # Alerting
-    ALERT_COOLDOWN_HOURS = 1
-    MAX_ALERTS_PER_DAY = 10
+    alert_cooldown_hours: int = 1
+    max_alerts_per_day: int = 10
 
 
 # Global settings instance
@@ -126,16 +128,19 @@ model_config = ModelConfig()
 monitoring_config = MonitoringConfig()
 
 
+@lru_cache()
 def get_settings() -> Settings:
     """Get application settings instance."""
     return settings
 
 
+@lru_cache()
 def get_model_config() -> ModelConfig:
     """Get model configuration instance."""
     return model_config
 
 
+@lru_cache()
 def get_monitoring_config() -> MonitoringConfig:
     """Get monitoring configuration instance."""
     return monitoring_config 
